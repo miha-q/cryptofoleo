@@ -35,7 +35,7 @@ static void poly1305_dump(char *p, mpz_t n)
 
 //bS and bR are read little-endian and 16-bytes
 //return value must be freed
-uint8_t* poly1305(uint8_t* bR, uint8_t* bS, uint8_t* bM, uint32_t bMs)
+uint8_t* poly1305(uint8_t* bR, uint8_t* bS, uint8_t* bM, uint64_t bMs)
 {
 	uint8_t bP[] =
 	{
