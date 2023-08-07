@@ -83,3 +83,10 @@ This will both decrypt and "de-pad" RSA ciphertext blocks. Since the size of the
     uint8_t* sha256(uint8_t*, uint32_t);    
 
 Computes a SHA-256 hash with the two parameters being a pointer to the data and the size of the data to be hashed.
+
+### Other Notes
+
+This library uses /dev/random as the source for random numbers. It can be recompiled with other sources by changing the "DEVICE" parameter in the build options. For example, the hardware random number generator ubld.it™ TrueRNG V3 shows up as a device such as /dev/ttyACM0 on Linux and changing this compile option will cause it to use that device for random numbers instead.
+
+Due to this, it is currenty Linux-only since this is not a thing on Windows. It could be used on Windows through the Windows Subsystem for Linux (WSL). Otherwise, I may alter it to allow for building it for Windows in the future.
+
