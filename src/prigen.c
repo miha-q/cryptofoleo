@@ -112,7 +112,7 @@ static void PRIGEN_GeneratePrime(mpz_t n, int bytes)
 }
 
 /* Generate prime of X bytes */
-uint8_t* prigen(int bytes)
+uint8_t* prigen(uint16_t bytes)
 {
     uint8_t* buffer = malloc(bytes);
     FILE *f = fopen(DEVICE, "r");
