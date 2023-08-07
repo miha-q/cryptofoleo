@@ -6,11 +6,6 @@
 #include <gmp.h>
 #include "sha256.c"
 #include "prigen.c"
-#define RSA_ENCRYPTION 1
-#define RSA_SIGNATURE 2
-#define RSA_OAEP 3
-#define RSA_PSS 4
-
 /*typedef struct
 {
     mpz_t n, k;
@@ -97,7 +92,30 @@ rsakey_t rsa_private(uint8_t* p, uint16_t pS, uint8_t* q, uint16_t qS, uint8_t* 
     return ret;
 }
 
-rsakey_t rsa_open(uint8_t* bufferK, uint16_t byteSizeK, uint8_t* bufferN, uint16_t byteSizeN)
+uint8_t* rsa_export(rsakey_t key, uint8_t whichone, uint16_t* newsize)
+{
+    uint8_t* ret = malloc(key.bitWidth / 8);
+    switch (whichone)
+    {
+        case 'd':
+        case 'D':
+        case 'e':
+        case 'E':
+            rsa_store(key.k, ret, key.bitWidth / 8);
+            *newsize = key.bitWidth / 8;
+            return ret;
+        case 'n':
+        case 'N':
+            rsa_store(key.n, ret, key.bitWidth / 8);
+            *newsize = key.bitWidth / 8;
+            return ret;
+    }
+    *newsize = 0;
+    free(ret);
+    return NULL;
+}
+
+rsakey_t rsa_import(uint8_t* bufferK, uint16_t byteSizeK, uint8_t* bufferN, uint16_t byteSizeN)
 {
     rsakey_t ret;
     ret.bitWidth = byteSizeN * 8;
