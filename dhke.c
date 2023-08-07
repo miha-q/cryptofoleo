@@ -2,8 +2,65 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <gmp.h>
+#include "sha256.c"
 
-uint8_t RFC3526ID16[] =
+/*
+dhke(private, public)
+
+Here, "private" refers to random numbers intended to be used in the key exchange
+while "public" refers to the public information shared in the communication.
+If both are NULL, then it will generate random private numbers and return those
+as a buffer. If you then pass those into the function again as the private
+parameter and leave public as NULL, it will generate the public value meant to
+be shared. If you pass in your private value as the private parameter and the
+public value you acquired from the other person as the public parameter, it will
+return the shared secret.
+
+dhke_prf(desiredBytes, secret, secretS, label, labelS, seed, seedS)
+
+Because the key is 4096 bits long which may either be too much or too little
+depending on your purposes, this library also offers as a way to convert the
+output of the key exchange into any arbitrary number of bytes appropriate
+for your purposes.
+
+The "desired bytes" is the amount of bytes you want and the "secret" should
+be the 4096 byte shared secret arrived at after the key exchange. Note that
+the parameters that end with a capital S are just the length of bytes of
+the buffer pointed to by the previous parameter.
+
+The label should specify the kind of operation being done.
+
+It is common to not use the Diffie-Hellman output directly but instead
+transform it into another shared secret by first passing it into the PRF.
+Since the PRF is effectively a pseudorandom number generator, if both sides
+start with the same seed, they will still derive the same secret. In this
+case, the label is specified as "master secret" without a null terminator.
+
+This master secret is then used to derive further session keys to be used
+later in the communication, and at that point PRF() is called again with
+a different level "key expansion" again without the null terminator. Using
+different labels for different operations makes sure you get a different
+set of pseudorandom numbers per operations which both parties should agree
+upon.
+
+The seed helps increase the unpredictability of the PRF function by
+introducing additional random numbers into the starting point of the PRF()
+function. Since both parties need to produce the same numbers, this seed
+will have to be shared publicly, typically as part of the same handshake
+where they exchange their Diffie-Hellman numbers.
+
+The PRF() function utilizes the SHA-256 hash, but in theory could be
+modified to support any hash. However, SHA-256 is a pretty common industry
+standard, so for simplification reasons, the PRF() here does not require
+a hash as an input but just chooses SHA-256 with appropriate parameters
+automagically.
+*/
+
+
+/*
+    key exchange here is fixed to using a group from RFC#3526
+*/
+static uint8_t RFC3526ID16[] =
 {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xC9, 0x0F, 0xDA, 0xA2, 0x21, 0x68, 0xC2, 0x34,
@@ -71,30 +128,221 @@ uint8_t RFC3526ID16[] =
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
-void main()
+static void dhke_store(mpz_t n, uint8_t* b, uint32_t s)
 {
-    mpz_t n, g, m;
-    mpz_init(n);
-    mpz_init(g);
-    mpz_init(m);
+    for (uint32_t i = 0; i < s; i++)
+    {
+        b[s - (i + 1)] = mpz_get_ui(n);
+        mpz_div_ui(n, n, 256);
+    }
+}
 
-    //Load n and the generator
-    mpz_set_ui(g, 2);
+static void dhke_load(mpz_t n, uint8_t* b, uint32_t s)
+{
     mpz_set_ui(n, 0);
-    for (uint32_t i = 0; i < sizeof(RFC3526ID16); i++)
+    for (uint32_t i = 0; i < s; i++)
     {
         mpz_mul_ui(n, n, 256);
-        mpz_add_ui(n, n, RFC3526ID16[i]);
+        mpz_add_ui(n, n, b[i]);
+    }
+}
+
+/*
+    pass in NULL for both to get a new private value
+    pass in the private value with a null for public
+        to return the public value to be shared
+    pass in the private value and the public
+        received to compute the final key
+*/
+uint8_t* dhke(uint8_t* private, uint8_t* public)
+{
+    mpz_t n, g, p;
+    mpz_init(n);
+    mpz_init(g);
+    mpz_init(p);
+    mpz_set_ui(g, 2);
+    dhke_load(p, RFC3526ID16, 512);
+    uint8_t* out = malloc(512);
+
+    if (private == NULL && public == NULL)
+    {
+        FILE* f = fopen(DEVICE, "r");
+        fread(out, 1, 512, f);
+        fclose(f);
+        out[0] = out[0] & 0b01111111;
+    }
+    else if (private != NULL && public == NULL)
+    {
+        dhke_load(n, private, 512);
+        mpz_powm(n, g, n, p);
+        dhke_store(n, out, 512);
+    }
+    else
+    {
+        mpz_t m;
+        mpz_init(m);
+        dhke_load(m, private, 512);
+        dhke_load(n, public, 512);
+        mpz_powm(n, n, m, p);
+        dhke_store(n, out, 512);
+        mpz_clear(m);
+    }
+
+    mpz_clear(n);
+    mpz_clear(g);
+    mpz_clear(p);
+    return out;
+}
+
+//HMAC(K, m) = H((K' xor opad) || H((K' xor ipad) || m))
+static uint8_t* dhke_hmac
+(
+    uint8_t* (hash_func)(uint8_t*, uint32_t),
+    uint32_t Hs, //hash size
+    uint32_t Bs, //block size
+    uint8_t* K,
+    uint32_t Ks, //K size
+    uint8_t* M,
+    uint32_t Ms //M size
+)
+{
+    uint8_t* tmp1;
+    uint8_t* Kp; //K prime
+
+    if (Ks <= Bs)
+    {
+        Kp = malloc(Bs);
+        for (uint32_t i = 0; i < Bs; i++)
+        {
+            Kp[i] = i < Ks ? K[i] : 0;
+        }
+    }
+    else
+    {
+        tmp1 = hash_func(K, Ks);
+        Kp = malloc(Bs);
+        for (uint32_t i = 0; i < Bs; i++)
+        {
+            Kp[i] = i < Hs ? tmp1[i] : 0;
+        }
+        free(tmp1);
     }
     
-    //Compute m = (n - 1)/2
-    mpz_sub_ui(m, n, 1);
-    mpz_div_ui(m, m, 2);
+    //opad and ipad
+    uint8_t opad[Bs];
+    uint8_t ipad[Bs];
+    for (uint32_t i = 0; i < Bs; i++)
+    {
+        opad[i] = 0x5C;
+        ipad[i] = 0x36;
+    }
+    tmp1 = malloc(Bs + Ms);
+    for (uint32_t i = 0; i < Bs + Ms; i++)
+    {
+        tmp1[i] = i < Bs ? Kp[i] ^ ipad[i] :  M[i - Bs];
+    }
+    uint8_t* tmp2 = hash_func(tmp1, Bs + Ms);
+    free(tmp1);
 
-    //Compute g^m mod n
-    mpz_powm(m, g, m, n);
+    tmp1 = malloc(Bs + Hs);
+    for (uint32_t i = 0; i < Bs + Hs; i++)
+    {
+        tmp1[i] = i < Bs ? Kp[i] ^ opad[i] : tmp2[i - Bs];
+    }
+    free(tmp2);
+    free(Kp);
 
-    //Print the results
-    gmp_printf("Results: %Zd\n", m);
+    tmp2 = hash_func(tmp1, Bs + Hs);
+    free(tmp1);
+    return tmp2;
+    
+}
 
+//A(0) = seed
+//A(i) = HMAC_hash(secret, A(i-1))
+static uint8_t* dhke_hmac_A
+(
+    uint8_t iter, //iteration
+    uint8_t* (hash_func)(uint8_t*, uint32_t),
+    uint32_t Hs, //hash size
+    uint32_t Bs, //block size
+    uint8_t* secret,
+    uint32_t secretS, //secret size
+    uint8_t* seed,
+    uint32_t seedS, //seed size
+    uint32_t* returnSize
+)
+{
+    uint8_t* out;
+    if (iter == 0)
+    {
+        out = malloc(seedS);
+        for (uint32_t i = 0; i < seedS; i++)
+        {
+            out[i] = seed[i];
+        }
+        *returnSize = seedS;
+        return out;
+    }
+    uint32_t retSize;
+    uint8_t* tmp = dhke_hmac_A(iter - 1, hash_func, Hs, Bs, secret, secretS, seed, seedS, &retSize);
+    out = dhke_hmac(hash_func, Hs, Bs, secret, secretS, tmp, retSize);
+    free(tmp);
+    *returnSize = Hs;
+    return out;
+}
+
+//PRF(secret, label, seed) = P_<hash>(secret, label + seed)
+// = HMAC_hash(secret, A(i) + seed)
+//We are using sha256, but this is coded in such a way
+//  that we could extend it to other algorithms in the
+//  future.
+uint8_t* dhke_prf
+(
+    uint32_t desiredBytes,
+    uint8_t* secret,
+    uint32_t secretS,
+    uint8_t* label,
+    uint32_t labelS,
+    uint8_t* seed,
+    uint32_t seedS
+)
+{
+    uint32_t Hs = 32; 
+    uint32_t Bs = 64;
+    uint32_t iter = 1;
+    uint8_t* keystream = malloc(0);
+    uint8_t* labelSeed = malloc(labelS + seedS);
+
+    for (uint32_t i = 0; i < labelS + seedS; i++)
+        labelSeed[i] = i < labelS ? label[i] : seed[i - labelS];
+    
+    while (desiredBytes != 0)
+    {
+        uint32_t tmp1S;
+        uint8_t* tmp1 = dhke_hmac_A(iter, sha256, Hs, Bs, secret, secretS, labelSeed, labelS + seedS, &tmp1S);
+        tmp1 = realloc(tmp1, tmp1S + labelS + seedS);
+        for (uint32_t i = 0; i < labelS + seedS; i++)
+            tmp1[i + tmp1S] = labelSeed[i];
+        uint8_t* tmp2 = dhke_hmac(sha256, Hs, Bs, secret, secretS, tmp1, tmp1S + labelS + seedS);
+        free(tmp1);
+        if (desiredBytes >= Bs)
+        {
+            keystream = realloc(keystream, iter * Bs);
+            for (uint32_t i = 0; i < Bs; i++)
+                keystream[i + (iter - 1) * Bs] = tmp2[i];
+            desiredBytes -= Bs;
+        }
+        else
+        {
+            keystream = realloc(keystream, (iter - 1) * Bs + desiredBytes);
+            for (uint32_t i = 0; i < desiredBytes; i++)
+                keystream[i + (iter - 1) * Bs] = tmp2[i];
+            desiredBytes = 0;
+        }
+        free(tmp2);
+        iter++;
+    }
+    free(labelSeed);
+    return keystream;
 }
