@@ -1,0 +1,7 @@
+#include "headers.h"
+#include "chacha20.c"
+#include "dhke.c"
+#include "poly1305.c"
+#include "prigen.c"
+#include "rsa.c"
+#include "sha256.c"
