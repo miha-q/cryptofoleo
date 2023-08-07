@@ -24,7 +24,7 @@ depending on your purposes, this library also offers as a way to convert the
 output of the key exchange into any arbitrary number of bytes appropriate
 for your purposes. This is just an implemetation of the PRF() function described in RFC#5246 using SHA-256.
 
-The first parameter specifies how many bytes you wish to return. If you are using a ChaCha20 cipher, this will be 32, and thus the 512-byte shared secret will be converted into a 32-byte value. The rest of the parameters are pointers to some data followed by the number of bytes representing the size of that data. These three options are, in order, the secret, the label, and seed. The secret is the Diffie-Hellman shared secret derived at the end of the Diffie-Hellman key exchange process. The label and the seed require further explanation. 
+The first parameter specifies how many bytes you wish to return. If you are using a ChaCha20 cipher, this will be 32 as you will need 32-bytes for the ChaCha20 key, and thus the 512-byte shared secret will be converted into a 32-byte value. The rest of the parameters are pointers to some data followed by the number of bytes representing the size of that data. These three options are, in order, the secret, the label, and seed. The secret is the Diffie-Hellman shared secret derived at the end of the Diffie-Hellman key exchange process. The label and the seed require further explanation. 
 
 The label should specify the kind of operation being done. It is common to not use the Diffie-Hellman output directly but instead
 transform it into another shared secret by first passing it into the PRF.
