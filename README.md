@@ -36,7 +36,7 @@ This master secret is then used to derive further session keys to be used
 later in the communication, and at that point PRF() is called again with
 a different label "key expansion" again without the null terminator. Using
 different labels for different operations makes sure you get a different
-set of pseudorandom numbers per operations which both parties should agree
+set of pseudorandom numbers per operation which both parties should agree
 upon.
 
 The seed helps increase the unpredictability of the PRF function by
