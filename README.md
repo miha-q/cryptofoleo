@@ -22,16 +22,11 @@ Performs a Diffie-Hellman key exchange using the 4096-bit prime ID#16 located in
 Because the key is 4096 bits long which may either be too much or too little
 depending on your purposes, this library also offers as a way to convert the
 output of the key exchange into any arbitrary number of bytes appropriate
-for your purposes.
+for your purposes. This is just an implemetation of the PRF() function described in RFC#5246 using SHA-256.
 
-The "desired bytes" is the amount of bytes you want and the "secret" should
-be the 4096 byte shared secret arrived at after the key exchange. Note that
-the parameters that end with a capital S are just the length of bytes of
-the buffer pointed to by the previous parameter.
+The first parameter specifies how many bytes you wish to return. If you are using a ChaCha20 cipher, this will be 32, and thus the 512-byte shared secret will be converted into a 32-byte value. The rest of the parameters are pointers to some data followed by the number of bytes representing the size of that data. These three options are, in order, the secret, the label, and seed. The secret is the Diffie-Hellman shared secret derived at the end of the Diffie-Hellman key exchange process. The label and the seed require further explanation. 
 
-The label should specify the kind of operation being done.
-
-It is common to not use the Diffie-Hellman output directly but instead
+The label should specify the kind of operation being done. It is common to not use the Diffie-Hellman output directly but instead
 transform it into another shared secret by first passing it into the PRF.
 Since the PRF is effectively a pseudorandom number generator, if both sides
 start with the same seed, they will still derive the same secret. In this
@@ -39,7 +34,7 @@ case, the label is specified as "master secret" without a null terminator.
 
 This master secret is then used to derive further session keys to be used
 later in the communication, and at that point PRF() is called again with
-a different level "key expansion" again without the null terminator. Using
+a different label "key expansion" again without the null terminator. Using
 different labels for different operations makes sure you get a different
 set of pseudorandom numbers per operations which both parties should agree
 upon.
@@ -50,11 +45,6 @@ function. Since both parties need to produce the same numbers, this seed
 will have to be shared publicly, typically as part of the same handshake
 where they exchange their Diffie-Hellman numbers.
 
-The PRF() function utilizes the SHA-256 hash, but in theory could be
-modified to support any hash. However, SHA-256 is a pretty common industry
-standard, so for simplification reasons, the PRF() here does not require
-a hash as an input but just chooses SHA-256 with appropriate parameters
-automagically.
 
     uint8_t* prigen(uint16_t);    
 
@@ -84,7 +74,7 @@ Free the memory associated with an RSA key.
 
 Encrypts some data using an RSA key. This only encrypts a single block which is why the last parameter, which specifies the size of the data you wish to encrypt, is only a 16-bit integer. If you want to encrypt many blocks of data, you will need to break your data up into blocks manually and call this for each block. The third parameter points to the buffer of data you want to encrypt. 
 
-The second parameter is the type of padding to be used during encryption. Current supported options are RSA_ENCRYPTION which applies PKCS#1 v1.5 encryption padding, RSA_SIGNATURE which applies PKCS#1 v1.5 signature padding, and RSA_OAEP which applies optimal asymmetric encryption padding. You can also pass RSA_NONE into it for no padding at all.
+The second parameter is the type of padding to be used during encryption. Current supported options are RSA_ENCRYPTION which applies PKCS#1 v1.5 encryption padding, RSA_SIGNATURE which applies PKCS#1 v1.5 signature padding, and RSA_OAEP (with SHA-256) which applies optimal asymmetric encryption padding. You can also pass RSA_NONE into it for no padding at all.
 
     uint8_t* rsa_decrypt(rsakey_t, uint8_t, uint8_t*, uint16_t*);    
 
