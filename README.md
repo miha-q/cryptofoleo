@@ -62,7 +62,7 @@ Same as above except it calculates the RSA private key.
 
 Imports an RSA key from a buffer. This expects you to either pass in d and n, or e and n, depending on whether or not it is a private or public key.
 
-``uint8_t* rsa_export(rsakey_t, uint8_t, uint16_t*);``
+    uint8_t* rsa_export(rsakey_t, uint8_t, uint16_t*);
 
 Export an RSA key. The second parameter specifies which key you want to export. For public keys, valid options are the byte 'e' or the byte 'n'. For private keys, valid options are the byte 'd' or the byte 'n'. The last parameter will contain the size of the key in bytes, and the function returns a pointer to that key.
 
