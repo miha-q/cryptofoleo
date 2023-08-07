@@ -74,7 +74,7 @@ Free the memory associated with an RSA key.
 
 Encrypts some data using an RSA key. This only encrypts a single block which is why the last parameter, which specifies the size of the data you wish to encrypt, is only a 16-bit integer. If you want to encrypt many blocks of data, you will need to break your data up into blocks manually and call this for each block. The third parameter points to the buffer of data you want to encrypt. 
 
-The second parameter is the type of padding to be used during encryption. Current supported options are RSA_ENCRYPTION which applies PKCS#1 v1.5 encryption padding, RSA_SIGNATURE which applies PKCS#1 v1.5 signature padding, and RSA_OAEP (with SHA-256) which applies optimal asymmetric encryption padding. You can also pass RSA_NONE into it for no padding at all.
+The second parameter is the type of padding to be used during encryption. Current supported options are RSA_ENCRYPTION which applies PKCS#1 v1.5 encryption padding, RSA_SIGNATURE which applies PKCS#1 v1.5 signature padding, and RSA_OAEP which applies optimal asymmetric encryption padding with SHA-256. You can also pass RSA_NONE into it for no padding at all.
 
     uint8_t* rsa_decrypt(rsakey_t, uint8_t, uint8_t*, uint16_t*);    
 
