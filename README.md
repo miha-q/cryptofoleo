@@ -7,11 +7,11 @@ Generate a pseudorandom number mask from ChaCha20 cipher. The first parameter is
 
     uint8_t* poly1305(uint8_t*, uint8_t*, uint8_t*, uint32_t);    
 
-Generate a Poly1305 hash where the first two parameters are 16-byte starting states (r, s), the third is a pointer to the data to hash, and the last is the length of that data.
+Generate a Poly1305 hash where the first two parameters are 16-byte starting states (r, s), the third is a pointer to the data to hash, and the last is the length of that data. A Poly1305 hash is always 16 bytes. 
 
     uint8_t* chacha20_poly1305(uint8_t[32], uint8_t[12], uint8_t*, uint64_t);    
 
-Generates a Poly1305 message authentication code. The first two parameters are again the key and the nonce for the ChaCha20 cipher, the second is the pointer to the message to be authenticated and the last is the length of the message.
+Generates a Poly1305 message authentication code. The first two parameters are again the key and the nonce for the ChaCha20 cipher, the second is the pointer to the message to be authenticated and the last is the length of the message. This code is again 16 bytes.
 
     uint8_t* dhke(uint8_t*, uint8_t*);    
 
