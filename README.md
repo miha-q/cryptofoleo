@@ -3,7 +3,7 @@ A library with some basic cryptography for C and Haskell.
 
     uint8_t* chacha20(uint8_t[32], uint8_t[12], uint32_t, uint64_t);
 
-Generate a pseudorandom number mask from ChaCha20 cipher. The first parameter is the key, the second is the nonce, the third is the starting block number, and the last is the number of bytes you want to generate. If you are using this in conjunction with Poly1305, then use a starting block of 1 and not 0. 
+Generate a pseudorandom number mask from ChaCha20 cipher. The first parameter is the key, the second is the nonce, the third is the starting block number, and the last is the number of bytes you want to generate. If you are using this in conjunction with Poly1305, then you MUST use a starting block greater than zero.
 
     uint8_t* poly1305(uint8_t*, uint8_t*, uint8_t*, uint32_t);    
 
