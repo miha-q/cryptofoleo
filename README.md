@@ -1,23 +1,23 @@
 # CryptoFoleo
 A library with some basic cryptography for C and Haskell. 
 
-```uint8_t* chacha20(uint8_t[32], uint8_t[12], uint32_t, uint64_t);```
+    uint8_t* chacha20(uint8_t[32], uint8_t[12], uint32_t, uint64_t);
 
 Generate a pseudorandom number mask from ChaCha20 cipher. The first parameter is the key, the second is the nonce, the third is the starting block number, and the last is the number of bytes you want to generate. If you are using this in conjunction with Poly1305, then use a starting block of 1 and not 0. 
 
-```uint8_t* poly1305(uint8_t*, uint8_t*, uint8_t*, uint32_t);```
+    uint8_t* poly1305(uint8_t*, uint8_t*, uint8_t*, uint32_t);    
 
 Generate a Poly1305 hash where the first two parameters are 16-byte starting states (r, s), the third is a pointer to the data to hash, and the last is the length of that data.
 
-```uint8_t* chacha20_poly1305(uint8_t[32], uint8_t[12], uint8_t*, uint64_t);```
+    uint8_t* chacha20_poly1305(uint8_t[32], uint8_t[12], uint8_t*, uint64_t);    
 
 Generates a Poly1305 message authentication code. The first two parameters are again the key and the nonce for the ChaCha20 cipher, the second is the pointer to the message to be authenticated and the last is the length of the message.
 
-```uint8_t* dhke(uint8_t*, uint8_t*);```
+    uint8_t* dhke(uint8_t*, uint8_t*);    
 
 Performs a Diffie-Hellman key exchange using the 4096-bit prime ID#16 located in RFC#3526. The two parameters are "private" and "public" where "private" refers to the secret randomly generated numbers and the "public" refers to the computed numbers that are shared across the network. If the function is called with both options as NULL, then it will return a randomly generated "private" value that is 512 bytes in size. If that private value is then passed into the first parameter with the second parameter public left as NULL, then it will return the 512 public bytes that are meant to be shared over the network. If the private value is passed into the first parameter and the public value received other the network is passed into the second parameter, it will then compute the 512 byte shared secret.
 
-```uint8_t* dhke_prf(uint32_t, uint8_t*, uint32_t, uint8_t*, uint32_t, uint8_t*, uint32_t);```
+    uint8_t* dhke_prf(uint32_t, uint8_t*, uint32_t, uint8_t*, uint32_t, uint8_t*, uint32_t);    
 
 Because the key is 4096 bits long which may either be too much or too little
 depending on your purposes, this library also offers as a way to convert the
@@ -56,19 +56,19 @@ standard, so for simplification reasons, the PRF() here does not require
 a hash as an input but just chooses SHA-256 with appropriate parameters
 automagically.
 
-```uint8_t* prigen(uint16_t);```
+    uint8_t* prigen(uint16_t);    
 
 Generates a random prime number. The parameter is the byte-width of the prime number. For example, if you want to generate random 1024-bit RSA keys, then you can call this twice passing in the number 128.
 
-```rsakey_t rsa_public(uint8_t*, uint16_t, uint8_t*, uint16_t, uint8_t*, uint16_t);```
+    rsakey_t rsa_public(uint8_t*, uint16_t, uint8_t*, uint16_t, uint8_t*, uint16_t);    
 
 This takes three parameters: p, q, and e, and from them calculates the RSA public key. The reason there are six parameters is because after each key buffer is another parameter specifying the size of that buffer in bytes.
 
-```rsakey_t rsa_private(uint8_t*, uint16_t, uint8_t*, uint16_t, uint8_t*, uint16_t);```
+    rsakey_t rsa_private(uint8_t*, uint16_t, uint8_t*, uint16_t, uint8_t*, uint16_t);    
 
 Same as above except it calculates the RSA private key.
 
-```rsakey_t rsa_import(uint8_t*, uint16_t, uint8_t*, uint16_t);```
+    rsakey_t rsa_import(uint8_t*, uint16_t, uint8_t*, uint16_t);    
 
 Imports an RSA key from a buffer. This expects you to either pass in d and n, or e and n, depending on whether or not it is a private or public key.
 
@@ -76,20 +76,20 @@ Imports an RSA key from a buffer. This expects you to either pass in d and n, or
 
 Export an RSA key. The second parameter specifies which key you want to export. For public keys, valid options are the byte 'e' or the byte 'n'. For private keys, valid options are the byte 'd' or the byte 'n'. The last parameter will contain the size of the key in bytes, and the function returns a pointer to that key.
 
-```void rsa_free(rsakey_t);```
+    void rsa_free(rsakey_t);    
 
 Free the memory associated with an RSA key.
 
-```uint8_t* rsa_encrypt(rsakey_t, uint8_t, uint8_t*, uint16_t);```
+    uint8_t* rsa_encrypt(rsakey_t, uint8_t, uint8_t*, uint16_t);    
 
 Encrypts some data using an RSA key. This only encrypts a single block which is why the last parameter, which specifies the size of the data you wish to encrypt, is only a 16-bit integer. If you want to encrypt many blocks of data, you will need to break your data up into blocks manually and call this for each block. The third parameter points to the buffer of data you want to encrypt. 
 
 The second parameter is the type of padding to be used during encryption. Current supported options are RSA_ENCRYPTION which applies PKCS#1 v1.5 encryption padding, RSA_SIGNATURE which applies PKCS#1 v1.5 signature padding, and RSA_OAEP which applies optimal asymmetric encryption padding. You can also pass RSA_NONE into it for no padding at all.
 
-```uint8_t* rsa_decrypt(rsakey_t, uint8_t, uint8_t*, uint16_t*);```
+    uint8_t* rsa_decrypt(rsakey_t, uint8_t, uint8_t*, uint16_t*);    
 
 This will both decrypt and "de-pad" RSA ciphertext blocks. Since the size of the message could be smaller than the maximum size that could fit into the block, it also will return the message size after decryption as the last parameter. Like with encryption, you can also specify the padding type. If the padding types do not match up from what was encrypted, it will fail to decrypt, returning a NULL value.
 
-```uint8_t* sha256(uint8_t*, uint32_t);```
+    uint8_t* sha256(uint8_t*, uint32_t);    
 
 Computes a SHA-256 hash with the two parameters being a pointer to the data and the size of the data to be hashed.
